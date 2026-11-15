@@ -51,6 +51,31 @@ apps_init:
       base: bootstrap/homelab/base.values.yaml
       override: bootstrap/homelab/env/<env>.values.yaml
 
+worker_patches: &worker_patches
+  - apiVersion: v1alpha1
+    kind: RawVolumeConfig
+    name: longhorn
+    provisioning:
+      diskSelector:
+        match: disk.transport == 'virtio' && !system_disk && !disk.readonly
+      maxSize: 500GB
+  - apiVersion: v1alpha1
+    kind: SysctlConfig
+    params:
+      vm.nr_hugepages: "1024"
+  - apiVersion: v1alpha1
+    kind: KernelModuleConfig
+    name: nvme_tcp
+  - apiVersion: v1alpha1
+    kind: KernelModuleConfig
+    name: vfio_pci
+  - apiVersion: v1alpha1
+    kind: KernelModuleConfig
+    name: uio_pci_generic
+  - apiVersion: v1alpha1
+    kind: KernelModuleConfig
+    name: ublk_drv
+
 cluster:
   talos_version: 1.14.3
   kubernetes_version: 1.37.1
@@ -95,6 +120,7 @@ cluster:
       memory_mb: 49152
       node_ip: "192.168.144.231"
       pve_host: "pve01"
+      patches: *worker_patches
     w2:
       core_count: 8
       disk_gb: 20
@@ -102,6 +128,7 @@ cluster:
       memory_mb: 49152
       node_ip: "192.168.144.232"
       pve_host: "pve02"
+      patches: *worker_patches
     w3:
       core_count: 14
       disk_gb: 20
@@ -109,5 +136,6 @@ cluster:
       memory_mb: 49152
       node_ip: "192.168.144.233"
       pve_host: "pve03"
+      patches: *worker_patches
   talos_system_extensions:
     - siderolabs/iscsi-tools

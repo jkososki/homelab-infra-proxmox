@@ -1,5 +1,14 @@
 output "cluster" {
-  value = var.config.cluster
+  value = merge(var.config.cluster, {
+    controlplane_nodes = {
+      for name, node in var.config.cluster.controlplane_nodes :
+      name => merge(node, { patches = [for p in node.patches : yamlencode(p)] })
+    }
+    worker_nodes = {
+      for name, node in var.config.cluster.worker_nodes :
+      name => merge(node, { patches = [for p in node.patches : yamlencode(p)] })
+    }
+  })
 }
 
 output "apps_init" {

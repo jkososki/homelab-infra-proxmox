@@ -36,6 +36,7 @@ variable "config" {
         memory_mb     = number
         node_ip       = string
         pve_host      = string
+        patches       = optional(any, [])
       }))
       worker_nodes = map(object({
         core_count    = number
@@ -44,8 +45,9 @@ variable "config" {
         memory_mb     = number
         node_ip       = string
         pve_host      = string
+        patches       = optional(any, [])
       }))
-      talos_system_extensions = list(string)
+      talos_system_extensions = optional(list(string), [])
     })
   })
 }

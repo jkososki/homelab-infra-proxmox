@@ -18,7 +18,7 @@ locals {
 }
 
 module "cluster" {
-  source = "git@github.com:jkososki/terraform-proxmox-talos-k8s.git?ref=v0.0.3"
+  source = "git@github.com:jkososki/terraform-proxmox-talos-k8s.git?ref=v0.0.5"
 
   kubernetes_version      = local.cluster.kubernetes_version
   talos_version           = local.cluster.talos_version
