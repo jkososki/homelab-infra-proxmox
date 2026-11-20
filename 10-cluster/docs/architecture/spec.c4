@@ -1,0 +1,25 @@
+specification {
+  element person {
+    style {
+      shape person
+    }
+  }
+  element external {
+    style { shape browser }
+  }
+  element hypervisor {
+    style { color amber shape rectangle }
+  }
+  element vm {
+    style { color primary shape rectangle }
+  }
+  element software
+  element component
+  element resource {
+    style { shape storage }
+  }
+  tag controlplane
+  tag worker
+  relationship manages
+  relationship runs
+}

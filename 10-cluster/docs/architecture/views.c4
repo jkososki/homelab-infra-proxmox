@@ -1,0 +1,38 @@
+views {
+  view index {
+    title 'Landscape'
+    include *
+    autoLayout LeftRight
+  }
+
+  view provisioning of tofu {
+    title 'Provisioning Pipeline'
+    include *, proxmox, k8s, factory
+    autoLayout LeftRight
+  }
+
+  view nodes of proxmox {
+    title 'Proxmox Hosts and VMs'
+    include proxmox.**
+    exclude proxmox.pve01.img1, proxmox.pve02.img2, proxmox.pve03.img3
+    autoLayout TopBottom
+  }
+
+  view images of proxmox {
+    title 'Talos Image Distribution'
+    include proxmox.*, proxmox.pve01.img1, proxmox.pve02.img2, proxmox.pve03.img3, factory
+    autoLayout LeftRight
+  }
+
+  view controlplane {
+    title 'Control Plane Nodes'
+    include element.tag = #controlplane, k8s
+    autoLayout LeftRight
+  }
+
+  view workers {
+    title 'Worker Nodes (Longhorn storage)'
+    include element.tag = #worker, k8s
+    autoLayout LeftRight
+  }
+}

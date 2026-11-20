@@ -1,0 +1,109 @@
+model {
+  operator = person 'Operator' {
+    description 'Runs OpenTofu to provision the cluster'
+  }
+
+  factory = external 'Talos Image Factory' {
+    description 'Builds the Talos image from a schematic (https://factory.talos.dev)'
+    technology 'factory.talos.dev'
+  }
+
+  tofu = software 'OpenTofu Stack' {
+    description '''
+      `10-cluster` root module, applied with OpenTofu 1.13.
+      Uses the `proxmox`, `talos` providers via a single `cluster` module.
+    '''
+    technology 'OpenTofu 1.13'
+
+    schematic = component 'Image Schematic' {
+      description '''
+        Official extensions: `qemu-guest-agent`, `util-linux-tools`, `iscsi-tools`
+      '''
+      technology 'talos_image_factory_schematic'
+    }
+    secrets = component 'Machine Secrets' {
+      technology 'talos_machine_secrets'
+    }
+    machineConfig = component 'Machine Configuration' {
+      description 'Per-node machine config (control plane / worker) with Longhorn patches'
+      technology 'talos_machine_configuration'
+    }
+    bootstrap = component 'Cluster Bootstrap' {
+      description 'Bootstraps etcd on the first control plane and fetches kubeconfig'
+      technology 'talos_machine_bootstrap'
+    }
+  }
+
+  proxmox = hypervisor 'Proxmox VE Cluster' {
+    description '3-node cluster. Shared bridge `vmbr0`, storage `local` (images) and `local-lvm` (disks).'
+
+    pve01 = hypervisor 'pve01' {
+      cp1 = vm 'cp1' {
+        #controlplane
+        description 'VM 103 · 2 vCPU · 4 GiB · 20 GB disk · 192.168.144.135'
+      }
+      w1 = vm 'w1' {
+        #worker
+        description 'VM 107 · 8 vCPU · 48 GiB · 20 GB OS + 500 GB data · 192.168.144.231'
+      }
+      img1 = resource 'Talos 1.14.3 image' {
+        technology 'proxmox_download_file'
+      }
+    }
+    pve02 = hypervisor 'pve02' {
+      cp2 = vm 'cp2' {
+        #controlplane
+        description 'VM 102 · 2 vCPU · 4 GiB · 20 GB disk · 192.168.144.222'
+      }
+      w2 = vm 'w2' {
+        #worker
+        description 'VM 105 · 8 vCPU · 48 GiB · 20 GB OS + 500 GB data · 192.168.144.133'
+      }
+      img2 = resource 'Talos 1.14.3 image' {
+        technology 'proxmox_download_file'
+      }
+    }
+    pve03 = hypervisor 'pve03' {
+      cp3 = vm 'cp3' {
+        #controlplane
+        description 'VM 104 · 2 vCPU · 4 GiB · 20 GB disk · 192.168.144.131'
+      }
+      w3 = vm 'w3' {
+        #worker
+        description 'VM 106 · 14 vCPU · 48 GiB · 20 GB OS + 500 GB data · 192.168.144.134'
+      }
+      img3 = resource 'Talos 1.14.3 image' {
+        technology 'proxmox_download_file'
+      }
+    }
+  }
+
+  k8s = software 'Kubernetes Cluster "homelab"' {
+    description '''
+      Talos Linux Kubernetes cluster. API endpoint `https://192.168.144.220:6443`
+      (control plane VIP). 3 control plane + 3 worker nodes.
+    '''
+    technology 'Talos Linux 1.14.3'
+  }
+
+  operator -> tofu 'tofu apply'
+  tofu.schematic -> factory 'registers schematic'
+  tofu.machineConfig -> tofu.secrets 'uses'
+  tofu.bootstrap -> tofu.machineConfig 'applies config'
+  tofu -[manages]-> proxmox 'downloads images, creates VMs' {
+    technology 'bpg/proxmox'
+  }
+  tofu -[manages]-> k8s 'bootstraps, health check' {
+    technology 'siderolabs/talos'
+  }
+  proxmox.pve01.img1 -> factory 'downloads nocloud-amd64.raw.xz'
+  proxmox.pve02.img2 -> factory 'downloads nocloud-amd64.raw.xz'
+  proxmox.pve03.img3 -> factory 'downloads nocloud-amd64.raw.xz'
+  proxmox.pve01.cp1 -> proxmox.pve01.img1 'boots from'
+  proxmox.pve02.cp2 -> proxmox.pve02.img2 'boots from'
+  proxmox.pve03.cp3 -> proxmox.pve03.img3 'boots from'
+  proxmox.pve01.w1 -> proxmox.pve01.img1 'boots from'
+  proxmox.pve02.w2 -> proxmox.pve02.img2 'boots from'
+  proxmox.pve03.w3 -> proxmox.pve03.img3 'boots from'
+  proxmox -[runs]-> k8s 'hosts nodes as VMs'
+}
